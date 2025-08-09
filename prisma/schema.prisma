@@ -7,24 +7,361 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Guild {
-  id        String   @id @db.VarChar(32) // guildId Discord
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  prefix    String?  @db.VarChar(8) // si un jour tu veux aussi du prefix
-  locale    String?  @db.VarChar(8)
-  members   Member[]
+// ---------- Enums ----------
+enum Td2Zone {
+  HEURES_SOMBRE
+  CHEVAL_DE_FER
 }
 
-model Member {
-  id       String   @id @db.VarChar(40) // `${guildId}:${userId}`
-  guildId  String   @db.VarChar(32)
-  userId   String   @db.VarChar(32)
-  joinedAt DateTime @default(now())
-  xp       Int      @default(0)
+enum CombatRole {
+  DPS
+  HEAL
+  TANK
+}
+
+enum AttendStatus {
+  CONFIRMED
+  LATE
+  ABSENT
+  SUBSTITUTE
+}
+
+enum SessionStatus {
+  PLANNED
+  LIVE
+  DONE
+  CANCELLED
+}
+
+enum InfractionType {
+  WARN
+  NOTE
+  TIMEOUT
+  MUTE
+  KICK
+  BAN
+  SOFTBAN
+  UNBAN
+}
+
+// ---------- Guild & Channels ----------
+model Guild {
+  id        String   @id @db.VarChar(32)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name   String? @db.VarChar(100)
+  locale String? @db.VarChar(8)
+  tz     String? @db.VarChar(64)
+
+  channels   GuildChannels?
+  raids      Raid[]
+  activities Activity[]
+  incursions Incursion[]
+
+  // Relations modération
+  moderationSettings GuildModerationSettings?
+  automodRules       AutomodRule[]
+  infractions        Infraction[]
+  modNotes           ModNote[]
+
+  // Profils utilisateurs par guilde
+  profiles UserProfile[]
+
+  @@index([locale])
+  @@index([tz])
+}
+
+model GuildChannels {
+  guildId                   String   @id @db.VarChar(32)
+  welcomeChannelId          String   @db.VarChar(32)
+  goodbyeChannelId          String   @db.VarChar(32)
+  logChannelId              String   @db.VarChar(32)
+  botAnnouncementsChannelId String   @db.VarChar(32)
+  raidsTd2ChannelId         String?  @db.VarChar(32)
+  activitiesTd2ChannelId    String?  @db.VarChar(32)
+  incursionChannelId        String?  @db.VarChar(32)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+}
+
+// ---------- Builds & Points ----------
+model PlayerBuild {
+  id        BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  userId    String     @db.VarChar(32)
+  guildId   String     @db.VarChar(32)
+  role      CombatRole
+  name      String     @db.VarChar(100)
+  details   String?    @db.Text
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@unique([guildId, userId, name])
+  @@index([guildId, userId])
+  @@index([guildId, role])
+}
+
+model PlayerPoints {
+  guildId   String   @db.VarChar(32)
+  userId    String   @db.VarChar(32)
+  points    Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@id([guildId, userId])
+}
+
+// ---------- User Profiles ----------
+model UserProfile {
+  guildId   String   @db.VarChar(32)
+  userId    String   @db.VarChar(32)
+  alias     String?  @db.VarChar(64)
+  tz        String?  @db.VarChar(64)
+  note      String?  @db.VarChar(255)
+  updatedAt DateTime @updatedAt
 
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
-  @@unique([guildId, userId])
+  @@id([guildId, userId])
+}
+
+// ---------- Raids TD2 ----------
+model Raid {
+  id             BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  guildId        String        @db.VarChar(32)
+  createdBy      String        @db.VarChar(32)
+  zone           Td2Zone
+  name           String?       @db.VarChar(100)
+  startAt        DateTime
+  status         SessionStatus @default(PLANNED)
+  maxPlayers     Int           @default(8)
+  notes          String?       @db.VarChar(255)
+  reminder15Sent Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  postChannelId String? @db.VarChar(32)
+  postMessageId String? @db.VarChar(32)
+
+  guild        Guild             @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  participants RaidParticipant[]
+
+  @@unique([postChannelId, postMessageId])
+  @@index([guildId, status, startAt])
+}
+
+model RaidParticipant {
+  raidId       BigInt       @db.UnsignedBigInt
+  userId       String       @db.VarChar(32)
+  role         CombatRole
+  secondChoice CombatRole?
+  status       AttendStatus @default(CONFIRMED)
+  position     Int?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  confirmedAt DateTime?
+  cancelledAt DateTime?
+
+  raid Raid @relation(fields: [raidId], references: [id], onDelete: Cascade)
+
+  @@id([raidId, userId])
+  @@unique([raidId, position])
+  @@index([raidId, role])
+  @@index([raidId, status])
+  @@index([userId])
+}
+
+// ---------- Activités TD2 ----------
+model Activity {
+  id             BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  guildId        String        @db.VarChar(32)
+  createdBy      String        @db.VarChar(32)
+  kind           String        @db.VarChar(50)
+  name           String        @db.VarChar(100)
+  startAt        DateTime?
+  status         SessionStatus @default(PLANNED)
+  maxPlayers     Int           @default(4)
+  notes          String?       @db.VarChar(255)
+  reminder15Sent Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  postChannelId String? @db.VarChar(32)
+  postMessageId String? @db.VarChar(32)
+
+  guild        Guild                 @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  participants ActivityParticipant[]
+
+  @@unique([postChannelId, postMessageId])
+  @@index([guildId, status, startAt])
+  @@index([kind])
+}
+
+model ActivityParticipant {
+  activityId BigInt  @db.UnsignedBigInt
+  userId     String  @db.VarChar(32)
+  isSub      Boolean @default(false)
+  position   Int?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  confirmedAt DateTime?
+  cancelledAt DateTime?
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@id([activityId, userId])
+  @@unique([activityId, position])
+  @@index([userId])
+}
+
+// ---------- Incursions TD2 ----------
+model Incursion {
+  id             BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  guildId        String        @db.VarChar(32)
+  createdBy      String        @db.VarChar(32)
+  name           String        @db.VarChar(100)
+  difficulty     String?       @db.VarChar(32)
+  startAt        DateTime?
+  status         SessionStatus @default(PLANNED)
+  maxPlayers     Int           @default(4)
+  notes          String?       @db.VarChar(255)
+  reminder15Sent Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  postChannelId  String?       @db.VarChar(32)
+  postMessageId  String?       @db.VarChar(32)
+
+  guild        Guild                  @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  participants IncursionParticipant[]
+
+  @@unique([postChannelId, postMessageId])
+  @@index([guildId, status, startAt])
+}
+
+model IncursionParticipant {
+  incursionId  BigInt       @db.UnsignedBigInt
+  userId       String       @db.VarChar(32)
+  role         CombatRole
+  secondChoice CombatRole?
+  status       AttendStatus @default(CONFIRMED)
+  position     Int?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  confirmedAt DateTime?
+  cancelledAt DateTime?
+
+  incursion Incursion @relation(fields: [incursionId], references: [id], onDelete: Cascade)
+
+  @@id([incursionId, userId])
+  @@unique([incursionId, position])
+  @@index([incursionId, role])
+  @@index([incursionId, status])
+  @@index([userId])
+}
+
+// ---------- Modération ----------
+model GuildModerationSettings {
+  guildId             String   @id @db.VarChar(32)
+  muteRoleId          String?  @db.VarChar(32)
+  maxWarnsMuteMinutes Int?
+  maxWarnsKick        Int?
+  maxWarnsBanDays     Int?
+  warnDecayDays       Int?
+  automodEnabled      Boolean  @default(false)
+  blockInvites        Boolean  @default(false)
+  blockLinks          Boolean  @default(false)
+  capsThreshold       Int?
+  mentionThreshold    Int?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+}
+
+model AutomodRule {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  guildId   String   @db.VarChar(32)
+  key       String   @db.VarChar(64)
+  enabled   Boolean  @default(true)
+  config    Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, key])
   @@index([guildId])
+}
+
+model CaseSeq {
+  guildId    String @id @db.VarChar(32)
+  lastNumber Int    @default(0)
+}
+
+model Infraction {
+  id           BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
+  guildId      String         @db.VarChar(32)
+  caseNumber   Int
+  userId       String         @db.VarChar(32)
+  moderatorId  String         @db.VarChar(32)
+  type         InfractionType
+  reason       String?        @db.VarChar(1024)
+  evidenceUrl  String?        @db.VarChar(255)
+  createdAt    DateTime       @default(now())
+  expiresAt    DateTime?
+  active       Boolean        @default(true)
+  closedAt     DateTime?
+  closedBy     String?        @db.VarChar(32)
+  logChannelId String?        @db.VarChar(32)
+  logMessageId String?        @db.VarChar(32)
+
+  guild       Guild            @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  attachments CaseAttachment[]
+
+  @@unique([guildId, caseNumber])
+  @@index([guildId, userId])
+  @@index([active, expiresAt])
+  @@index([createdAt])
+  @@index([type])
+}
+
+model CaseAttachment {
+  id           BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  infractionId BigInt   @db.UnsignedBigInt
+  url          String   @db.VarChar(255)
+  createdAt    DateTime @default(now())
+
+  infraction Infraction @relation(fields: [infractionId], references: [id], onDelete: Cascade)
+
+  @@index([infractionId])
+}
+
+model ModNote {
+  id          BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  guildId     String   @db.VarChar(32)
+  userId      String   @db.VarChar(32)
+  moderatorId String   @db.VarChar(32)
+  content     String   @db.VarChar(1024)
+  createdAt   DateTime @default(now())
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId, userId, createdAt])
+}
+
+// ---------- Scheduled Jobs ----------
+model Job {
+  id        BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  kind      String    @db.VarChar(32)
+  dueAt     DateTime
+  payload   Json
+  lockedAt  DateTime?
+  doneAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([dueAt, kind])
 }

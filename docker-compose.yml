@@ -1,0 +1,54 @@
+version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: rewoork_mysql
+    restart: unless-stopped
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u${MYSQL_USER} -p${MYSQL_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # ports:
+    #   - "3306:3306" # décommente si tu veux accéder à MySQL depuis l’hôte
+
+  bot:
+    build: .
+    container_name: rewoork_bot
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      # Compose injecte les variables de .env ci-dessous
+      DATABASE_URL: ${DATABASE_URL}
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID}
+      NODE_ENV: production
+      LOG_LEVEL: info
+      HEALTH_PORT: 3000
+    ports:
+      - "3000:3000" # healthcheck HTTP
+
+  # Adminer (UI web pour MySQL) — optionnel
+  adminer:
+    image: adminer:latest
+    container_name: rewoork_adminer
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      # host = mysql (nom du service)
+      ADMINER_DEFAULT_SERVER: mysql
+
+volumes:
+  mysql_data:

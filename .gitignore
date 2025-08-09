@@ -1,0 +1,42 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+
+# Prisma
+prisma/dev.db
+prisma/dev.db-journal
+prisma/migrations/
+# On peut garder migrations si on veut versionner le schema
+# mais si c'est purement local, on ignore
+
+# Logs
+logs/
+*.log
+*.tmp
+*.temp
+
+# Coverage / tests
+coverage/
+.nyc_output/
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# IDE / editor
+.idea/
+.vscode/
+*.iml
+
+# Builds / output
+dist/
+build/

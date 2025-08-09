@@ -1,0 +1,47 @@
+# Node modules & cache
+node_modules
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Git & VCS
+.git
+.gitignore
+.gitattributes
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# IDE / editor
+.idea
+.vscode
+*.iml
+
+# Logs
+logs
+*.log
+
+# Tests / coverage
+coverage
+.nyc_output
+
+# Build / output
+dist
+build
+tmp
+*.tmp
+*.temp
+
+# Local databases / files
+prisma/dev.db
+prisma/dev.db-journal
+
+# Docker
+Dockerfile*
+docker-compose*.yml

@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Guild {
+  id        String   @id @db.VarChar(32) // guildId Discord
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  prefix    String?  @db.VarChar(8) // si un jour tu veux aussi du prefix
+  locale    String?  @db.VarChar(8)
+  members   Member[]
+}
+
+model Member {
+  id       String   @id @db.VarChar(40) // `${guildId}:${userId}`
+  guildId  String   @db.VarChar(32)
+  userId   String   @db.VarChar(32)
+  joinedAt DateTime @default(now())
+  xp       Int      @default(0)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, userId])
+  @@index([guildId])
+}

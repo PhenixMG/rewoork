@@ -8,6 +8,7 @@ export function startHealthServer(statusFn) {
             res.writeHead(200, { "Content-Type": "application/json" });
             res.end(JSON.stringify(status));
         } catch (e) {
+            console.error(e);
             res.writeHead(500, { "Content-Type": "application/json" });
             res.end(JSON.stringify({ ok: false }));
         }

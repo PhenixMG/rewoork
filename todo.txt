@@ -1,0 +1,55 @@
+Les indispensables UX
+
+    /raid list (avec filtres status, pagination + autocomplétion d’ID).
+
+    /raid info <id> (embed synthèse + boutons admin rapides).
+
+    /raid reschedule <id> <date> (replanifie, re-enqueue les jobs). V
+
+    /raid done <id> (clôture propre : status=DONE, disable boutons). V
+
+    /raid note <id> <texte> (éditer les notes depuis la commande).
+
+Gestion d’effectif (qualité de vie)
+
+    Roster lock/unlock (ex: lock à T–5 min → plus d’inscriptions).
+
+    Promote auto des suppléants quand une place se libère (et DM informatif).
+
+    Swap (échanger position/slot entre deux joueurs).
+
+    Assigner rôle par admin (bouton “Set DPS/HEAL/TANK” pour un @membre).
+
+Notifications & points
+
+    Fenêtre de grâce pour points (ex: +2 min après start).
+
+    Rappel DM individuel (optionnel) aux confirmés à T–15.
+
+    Ping rôle/role mention configurable (ex: @Raiders si set).
+
+Threads & salons
+
+    /raid movechannel <id> <#salon> (reposte le message + transfert du thread).
+
+    Renommage auto du thread quand on replanifie (date/heure à jour).
+
+    Auto-clean (flag activable) des artefacts à J+7 (tu l’as en commentaire).
+
+Sécurité & permissions
+
+    Autorisation: canManageRaids déjà là → ajoute un /setup roles raid_manager pour le setter.
+
+    Vérif perms proactives au /raid create (log warning si manque CreatePublicThreads/SendMessagesInThreads/ManageChannels).
+
+Statistiques rapides
+
+    /raid stats [@user]: nb de raids joués, % présence, rôle préféré, points.
+
+    /raid top roles: distribution DPS/HEAL/TANK sur le mois.
+
+Tests/robustesse
+
+    Tests unitaires du worker jobs (lock/backoff/idempotence).
+
+    E2E script: crée un raid dans 2 min → attend → vérifie rappel/start/points.

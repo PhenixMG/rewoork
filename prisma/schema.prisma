@@ -64,6 +64,7 @@ model Guild {
   automodRules       AutomodRule[]
   infractions        Infraction[]
   modNotes           ModNote[]
+  guildRoles         GuildRoles[]
 
   // Profils utilisateurs par guilde
   profiles UserProfile[]
@@ -81,6 +82,7 @@ model GuildChannels {
   raidsTd2ChannelId         String?  @db.VarChar(32)
   activitiesTd2ChannelId    String?  @db.VarChar(32)
   incursionChannelId        String?  @db.VarChar(32)
+  buildChannelId            String?  @db.VarChar(32)
   createdAt                 DateTime @default(now())
   updatedAt                 DateTime @updatedAt
 
@@ -89,18 +91,45 @@ model GuildChannels {
 
 // ---------- Builds & Points ----------
 model PlayerBuild {
-  id        BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
-  userId    String     @db.VarChar(32)
-  guildId   String     @db.VarChar(32)
-  role      CombatRole
-  name      String     @db.VarChar(100)
-  details   String?    @db.Text
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id               BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  userId           String             @db.VarChar(32)
+  guildId          String             @db.VarChar(32)
+  role             CombatRole
+  name             String             @db.VarChar(100)
+  details          String?            @db.Text
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  playerBuildImage PlayerBuildImage[]
 
   @@unique([guildId, userId, name])
   @@index([guildId, userId])
   @@index([guildId, role])
+}
+
+model PlayerBuildImage {
+  id        BigInt @id @default(autoincrement()) @db.UnsignedBigInt
+  buildId   BigInt @db.UnsignedBigInt
+  url       String @db.VarChar(512)
+  filename  String @db.VarChar(128)
+  mimeType  String @db.VarChar(64)
+  size      Int    @default(0)
+  sortOrder Int    @default(0)
+
+  build PlayerBuild @relation(fields: [buildId], references: [id], onDelete: Cascade)
+
+  @@index([buildId, sortOrder])
+}
+
+model BuildDraft {
+  id        BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  guildId   String     @db.VarChar(32)
+  userId    String     @db.VarChar(32)
+  role      CombatRole
+  images    Json
+  createdAt DateTime   @default(now())
+  expiresAt DateTime   @default(dbgenerated("(now() + interval 1 hour)")) // ou gère en code
+
+  @@index([guildId, userId])
 }
 
 model PlayerPoints {
@@ -110,6 +139,13 @@ model PlayerPoints {
   updatedAt DateTime @updatedAt
 
   @@id([guildId, userId])
+}
+
+model GuildRoles {
+  guildId           String  @id @db.VarChar(32)
+  raidManagerRoleId String? @db.VarChar(32)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 }
 
 // ---------- User Profiles ----------
@@ -132,10 +168,8 @@ model Raid {
   guildId        String        @db.VarChar(32)
   createdBy      String        @db.VarChar(32)
   zone           Td2Zone
-  name           String?       @db.VarChar(100)
   startAt        DateTime
   status         SessionStatus @default(PLANNED)
-  maxPlayers     Int           @default(8)
   notes          String?       @db.VarChar(255)
   reminder15Sent Boolean       @default(false)
   createdAt      DateTime      @default(now())
@@ -146,6 +180,10 @@ model Raid {
 
   guild        Guild             @relation(fields: [guildId], references: [id], onDelete: Cascade)
   participants RaidParticipant[]
+
+  voiceChannelId     String? @db.VarChar(32)
+  startPointsGranted Boolean @default(false)
+  rosterLocked       Boolean @default(false)
 
   @@unique([postChannelId, postMessageId])
   @@index([guildId, status, startAt])
@@ -355,13 +393,20 @@ model ModNote {
 
 // ---------- Scheduled Jobs ----------
 model Job {
-  id        BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
-  kind      String    @db.VarChar(32)
-  dueAt     DateTime
-  payload   Json
+  id      BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  kind    String   @db.VarChar(32)
+  dueAt   DateTime
+  payload Json
+
   lockedAt  DateTime?
+  lockedBy  String?   @db.VarChar(64) // id d’instance / hostname
+  attempts  Int       @default(0) // nb de tentatives
+  lastError String?   @db.VarChar(255) // dernier message d’erreur
+
   doneAt    DateTime?
   createdAt DateTime  @default(now())
 
   @@index([dueAt, kind])
+  @@index([lockedAt])
+  @@index([doneAt])
 }

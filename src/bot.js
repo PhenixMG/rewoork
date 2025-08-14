@@ -6,6 +6,7 @@ import { cfg } from "./lib/config.js";
 import { log } from "./lib/logger.js";
 import { safeDbConnect, gracefulShutdown } from "./lib/db.js";
 import { startHealthServer } from "./lib/health.js";
+import {startJobsWorker} from "./jobs/worker.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -80,6 +81,7 @@ async function registerCommands() {
         log.error({ err }, "Login failed");
         process.exit(1);
     });
+    startJobsWorker(client)
 })();
 
 // Robustesse process

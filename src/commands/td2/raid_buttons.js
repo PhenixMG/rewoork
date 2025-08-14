@@ -171,7 +171,7 @@ async function refreshMessage(interaction, raid) {
 // DM informatif
 function queueDm(client, userId, raid) {
     client.users.fetch(userId).then(u => {
-        u.send(`✅ Tu as été **promu titulaire** pour le raid **${labelZone(raid.zone)}** (#${raid.id}).`)
+        u.send(`✅ Tu as été **promu titulaire** pour le raid **${raid.zone}** (#${raid.id}).`)
             .catch(() => {});
     }).catch(() => {});
 }

@@ -2,7 +2,7 @@ import {AttachmentBuilder, ChannelType, PermissionFlagsBits} from "discord.js";
 import { prisma } from "../lib/db.js";
 
 export async function onSubmit(interaction) {
-    const [_, __, guildId, userId] = interaction.customId.split(":");
+    const [guildId, userId] = interaction.customId.split(":");
     if (guildId !== interaction.guildId || userId !== interaction.user.id) {
         return interaction.reply({ content: "❌ Cette modal n'est pas pour toi.", ephemeral: true });
     }
@@ -110,15 +110,6 @@ export async function onSubmit(interaction) {
 }
 
 // ===== Utils =====
-function roleEmoji(role) {
-    switch (role) {
-        case "DPS":  return "⚔️";
-        case "HEAL": return "💉";
-        case "TANK": return "🛡️";
-        default:     return "🧱";
-    }
-}
-
 async function logWarn(guild, logChannelId, msg) {
     if (!logChannelId) return;
     const ch = await guild.channels.fetch(logChannelId).catch(() => null);

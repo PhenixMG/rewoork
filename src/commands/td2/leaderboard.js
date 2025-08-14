@@ -77,8 +77,3 @@ export async function renderLeaderboard(guildId, page, size, viewerId) {
 
     return { embed, components };
 }
-
-function lbId(guildId, page, size) {
-    // customId = LB:<guildId>:<page>:<size>
-    return `LB:${guildId}:${page}:${size}`;
-}

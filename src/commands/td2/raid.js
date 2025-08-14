@@ -228,8 +228,7 @@ async function doneRaid(interaction) {
     if (raid.status === "CANCELLED") return interaction.reply({ content: "Ce raid est **annulé**.", ephemeral: true });
 
     await interaction.deferReply({ ephemeral: true });
-
-    const updated = await prisma.raid.update({
+    await prisma.raid.update({
         where: { id },
         data: { status: "DONE" }
     });
@@ -451,9 +450,9 @@ function progressBar(current, max, size = 12) {
 function labelZone(z) { return z === "HEURES_SOMBRE" ? "Heures Sombres" : "Cheval de Fer"; }
 
 function parseDateInTz(s, tz) {
-    const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\s+(\d{1,2}):(\d{2})$/);
+    const m = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})\s+(\d{1,2}):(\d{2})$/);
     if (!m) return null;
     const [, d, mo, y, h, mi] = m.map(Number);
-    const isoLocal = `${y}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")} ${String(h).padStart(2,"0")}:${String(mi).padStart(2,"0")}:00`;
+    const isoLocal = `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")} ${String(h).padStart(2, "0")}:${String(mi).padStart(2, "0")}:00`;
     return zonedTimeToUtc(isoLocal, tz);
 }

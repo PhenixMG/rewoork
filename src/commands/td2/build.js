@@ -1,6 +1,6 @@
 import {
     SlashCommandBuilder, ModalBuilder, TextInputBuilder, TextInputStyle,
-    ActionRowBuilder, AttachmentBuilder, EmbedBuilder
+    ActionRowBuilder
 } from "discord.js";
 import { prisma } from "../../lib/db.js";
 
